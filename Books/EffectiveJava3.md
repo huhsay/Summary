@@ -15,6 +15,10 @@
 
    - [아이템 1. 생성자 대신 정적 팩터리 메서드를 고려하라](#아이템-1.-생성자-대신-정적-팩터리-메서드를-고려하라)
    - [아이템 2. 생성자에 매개변수가 많다면 빌더를 고려하라](#아이템-2.-생성자에-매개변수가-많다면-빌더를-고려하라)
+   - [아이템 3. private 생성자나 열거 타입으로 싱글턴임을 보증하라](#아이템-3.-private-생성자나-열거-타입으로-싱글턴임을-보증하라)
+   - [아이템 5. 자원을 직접 명시하지 말고 의존 객체 주입을 사용하라](#아이템-5.-자원을-직접-명시하지-말고-의존-객체-주입을-사용하라)
+   - [아이템6. 불필요한 객체 생성을 피하라](#아이템-6.-불필요한-객체-생성을-피하라)
+   - [아이템 7. 다 쓴 객체 참조를 해제하라](#아이템-7.-다-쓴-객체-참조를-해제하라)
 
 3. [모든 객체의 공통 메서드]()
 
@@ -56,6 +60,10 @@
 
 
 ### 아이템 1. 생성자 대신 정적 팩터리 메서드를 고려하라
+
+
+
+
 
 ### 아이템 2. 생성자에 매개변수가 많다면 빌더를 고려하라
 
@@ -211,6 +219,9 @@
   ```
 
 
+
+
+
 ### 아이템 3. private 생성자나 열거 타입으로 싱글턴임을 보증하라
 
 * 싱글턴 : 인스턴스를 오직 하나만 생성할 수 있는 클래스
@@ -241,7 +252,170 @@
   ```
 
 
-### 아이템 4. 인스턴스화를 막으려거든 prvate 생성자를 사용하라
+
+
+
+### 아이템 4. 인스턴스화를 막으려거든 private 생성자를 사용하라
+
+
+
+
+
+### 아이템 5. 자원을 직접 명시하지 말고 의존 객체 주입을 사용하라
+
+>  클래스가 내부적으로 하나 이상의 자원에 의존하고, 그 자원이 클래스 동작에 영향을 준다면 싱글턴과 정적 유틸리티 클래스는 사용하지 않는 것이 좋다. 이 자원들을 클래스가 직접 만들게 해서도 안된다. 대신 필요한 자원을 (혹은 그 자원을 만들어주는 팩터리를)생성자에 (혹은 정적 팩터리나 빌더에) 넘겨주자. 의존 객체 주입이라 하는 이 기법은 클래스의 유연성, 재사용성, 테스트 용이성을 기막히게 개선해준다.
+
+
+
+* spell을 체크하는 메소드에는 사전이라는 자원이 필요하다. 
+
+  * 정적 유틸리티를 잘못 사용한 예:
+
+    ```java
+    public class SpellChecker {
+        private static final Lexicon dictionary = .... ; // 필요한 자원을 정적으로
+        
+        private SpellChecker(); // 객체 생성방지
+        
+        public static boolean isValid(String word) {...}
+        public static List<String> suggestions(String typo) {...}
+       
+    }
+    ```
+
+  * 싱글턴을 잘못 사용한 예
+
+    ```java
+    public class SpellChecker {
+        private final Lexicon dictionary = .... ;
+        
+        private SpellChecker(); // 객체 생성방지
+        public static SpellChecker INSTANCE = new SpellChecker();
+        
+        public static boolean isValid(String word) {...}
+        public static List<String> suggestions(String typo) {...}
+       
+    }
+    
+    ```
+
+  * 사전 특성상 언어에 따라 여러 사전이 필요하다고 가정한다면 위의 방법은 올바르지 않다.
+
+  * 단순히 dictionary에 final을 제거하고 변경가능한 메서드를 추가한다 하더라도,  오류를 내기 쉽고 멀티스레드 환경에서 쓸 수 없다. 사용하는 자원에 따라 동작이 달라지는 클래스에는 정적 유틸리티 클래스나 싱글턴 방식이 적합하지 않다.
+
+  * 클래스가 여러 자원 인스턴스를 지원해야 하며, 클라이언트가 원하는 자원을 사용해야 한다. 
+
+* 인스턴스를 생성할 때 생성자에 필요한 자원을 넘겨주는 방식을 사용
+
+  ```java
+  public class SpellChecker {
+      private final Lexicon dictionary;
+      
+      public SpellChecker(Lexicon dictionary) {
+          this.dictionary = Objects.requireNonNull(dictionary); // null 체크함수
+      }
+      
+      public boolean isValid(String word) { ... };
+      public List<String> suggestions(String typo) { ... };
+  }
+  ```
+
+  * requireNonNull() 매개변수가 null이 아니면 obj 객체를 반환 null일 경우 NullPointException을.. 
+
+
+
+
+
+### 아이템6. 불필요한 객체 생성을 피하라
+
+> 똑같은 기능의 객체를 매번 생성하기 보다는 객체 하나를 재사용하는 편이 더 낫다.
+
+
+
+* `String s = new String("theodore");`는 매번 새로운 인스턴스를 생성한다. 따라서 `String s = "theodore"`를 사용하는 것이 더욱 효율적이다.
+
+* boxer클래스의 경우 생성자를 사용하여 새로운 인스턴스를 사용하는 것보다(new Boolean(String);) 팩터리 메서드를 사용하는 것이 좋다.(Boolean.valueOf(String);)
+
+* 생성 비용이 아주 비싼 객체는 캐싱을 사용하자
+
+  ```java
+  static boolean isRomanNumberal(String s){
+      return s.matches("^(?=.)M*(C[MD]|D?C{0,3})"
+                       + "(X[CL]|L?X{0,3})(I[XV]|V?I{0,3})$");
+  }
+  ```
+
+  String.matches는 정규표현식으로 문자열 형태를 확인하는 가장 쉬운 방법이다. 하지만 내부적으로 인스턴스 비용이큰 Pattern.mathche()함수를 사용하기 때문에 반복에 사용하면 좋지 않다. 성능을 개선하려면 필요한 정규표현식을 표현하는 Pattern 인스턴스를 클래스 초기화 과정에서 직접 생성해 캐싱해도구, 나중에 isRomanNumeral 메서드가 호출될 때마다 이 인스턴스를 재사용 할 수 있도록 한다.
+
+  ```java
+  public class RomanNumerals {
+      private static final Pattern ROMAN = Pattern.compile(
+      				"^(?=.)M*(C[MD]|D?C{0,3})"
+                       + "(X[CL]|L?X{0,3})(I[XV]|V?I{0,3})$");
+      
+      static boolean isRomanNumberal(String s){
+          return ROMAN.matcher(s).matcches();
+      }
+  }
+  ```
+
+* 박싱된 기본 타입보다 기본 타입을 사용하고, 의도치 않은 오토박싱이 숨어들지 않도록 주의
+
+* 객체 생성은 비싸니 무조건 지양해야 한다는 것이 아니라 적절히 사용해야 하는 것이다.  필요한경우 객체를 생성하는 것이 좋은 경우도 있다.
+
+
+
+
+
+### 아이템 7. 다 쓴 객체 참조를 해제하라
+
+> 메모리 누수는 겉으로 잘 드러나지 않아 시스템에 수년간 잠복하는 사례도 있다. 이런 누수는 철저한 코드 리뷰나 힙 프로파일러 같은 디버깅 도구를 동원해야만 발견되기도 한다. 그래서 이런 종류의 문제는 예방법을 익혀두는 것이 매우 중요하다.
+
+
+
+```java
+public class Stack {
+    private Object[] elements;
+    private int size = 0;
+    private static final int DEFAULT_INITIAL_CAPACITIY = 16;
+    
+    public Stack(){
+        elements = new Object[DEFAULT_INITIAL_CAPACITIY];
+    }
+    
+    public void push(Object e) {
+        ensureCapacitiy();
+        elements[size++] = e;
+    }
+    
+    public Object pop() {
+        if (size == 0)
+            throw new EmptyStackException();
+        return elements[--size];
+    }
+    
+    private void ensurCapacitiy(){
+        if(elements.length == size)
+            elements = Arrays.copyOf(elements, 2*size + 1);
+    }
+}
+```
+
+ 특별한 문제가 없어보이지만 이 스택을 사용하는 프로그램을 오래 실행하다 보면 가비지 컬렉션 활동과 메모리 사용량이 늘어라 성능이 저하될 것이다. pop() 메소드에서 더이상 사용되지 않은 객체들이 아직 남아 있기 때문이다.  가비지 컬렉션이 활성영역(size이상에 포함되는 영역)에 벗어나는 영역에 대해서 의미상 더이상 필요없는 개체라고 생각하지 못한다. 
+
+ 해법은 pop() 메소드 과정에서 해당 참조를 다 썼을 때 null 처리를 해준다.
+
+```java
+public Object pop() {
+    if (size == 0)
+        throw new EmptyStackException();
+    Object resutl = elements[--size];
+    elements[size] = null;
+    return result;
+}
+```
+
+
 
 
 
